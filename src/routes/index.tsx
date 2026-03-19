@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { getTasks, updateTaskStatus } from '../server/tasks'
+import { downloadExcel } from '../server/download'
 import { CheckCircle, Circle, Download } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
@@ -19,6 +20,21 @@ function App() {
     router.invalidate() // Refresh data after mutation
   }
 
+  const handleDownload = async () => {
+    const response = await downloadExcel()
+    if (response instanceof Response) {
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'Job_Hunt_Tracker.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    }
+  }
+
   // Group tasks by sheet
   const groupedTasks = tasks.reduce((acc, task) => {
     if (!acc[task.sheetName]) acc[task.sheetName] = []
@@ -34,13 +50,13 @@ function App() {
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Job Hunt Tracker</h1>
             <p className="text-gray-500 mt-2">Track every task needed to land your role</p>
           </div>
-          <a
-            href="/api/download"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
           >
             <Download className="w-4 h-4" />
             Download Excel
-          </a>
+          </button>
         </header>
 
         <div className="space-y-8">
