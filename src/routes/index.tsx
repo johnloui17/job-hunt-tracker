@@ -58,8 +58,8 @@ function App() {
       <div className="max-w-5xl mx-auto">
         <header className="mb-8 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Job Hunt Tracker</h1>
-            <p className="text-gray-500 mt-2">Track every task needed to land your role</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Task Tracker</h1>
+            <p className="text-gray-500 mt-2">Manage your job hunt progress</p>
           </div>
           <button
             onClick={handleDownload}

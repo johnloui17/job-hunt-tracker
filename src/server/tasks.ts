@@ -54,6 +54,29 @@ export const getTasks = createServerFn({ method: 'GET' }).handler(async () => {
   }
 })
 
+export const getRawExcelData = createServerFn({ method: 'GET' }).handler(async () => {
+  try {
+    const [xlsx, fs] = await Promise.all([import('xlsx'), import('fs')]);
+    const ABS_PATH = '/Users/loui/Desktop/FIND JOB!/Job_Hunt_Tracker.xlsx';
+    
+    if (!fs.default.existsSync(ABS_PATH)) return [];
+
+    const workbook = xlsx.default.readFile(ABS_PATH);
+    const results: { sheetName: string; rows: any[] }[] = [];
+
+    for (const sheetName of workbook.SheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = xlsx.default.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+      results.push({ sheetName, rows });
+    }
+
+    return results;
+  } catch (error: any) {
+    console.error('Error in getRawExcelData:', error.message);
+    return [];
+  }
+})
+
 export const updateTaskStatus = createServerFn({ method: 'POST' })
   .handler(async ({ data }: { data: { id: string, status: string } }) => {
     const workbook = xlsx.default.readFile(ABS_PATH)
