@@ -12,6 +12,8 @@ export type Task = {
   category: string;
   status: string;
   task: string;
+  description: string;
+  howTo: string;
   priority: string;
   effort: string;
 }
@@ -41,6 +43,8 @@ export const getTasks = createServerFn({ method: 'GET' }).handler(async () => {
           category: row[0] || "",
           status: row[1] || "",
           task: row[2] || "",
+          description: row[3] || "",
+          howTo: row[4] || "",
           priority: row[5] || "",
           effort: row[6] || "",
         })
@@ -56,11 +60,6 @@ export const getTasks = createServerFn({ method: 'GET' }).handler(async () => {
 
 export const getRawExcelData = createServerFn({ method: 'GET' }).handler(async () => {
   try {
-    const [xlsx, fs] = await Promise.all([import('xlsx'), import('fs')]);
-    const ABS_PATH = '/Users/loui/Desktop/FIND JOB!/Job_Hunt_Tracker.xlsx';
-    
-    if (!fs.default.existsSync(ABS_PATH)) return [];
-
     const workbook = xlsx.default.readFile(ABS_PATH);
     const results: { sheetName: string; rows: any[] }[] = [];
 
@@ -78,16 +77,32 @@ export const getRawExcelData = createServerFn({ method: 'GET' }).handler(async (
 })
 
 export const updateTaskStatus = createServerFn({ method: 'POST' })
-  .handler(async ({ data }: { data: { id: string, status: string } }) => {
-    const workbook = xlsx.default.readFile(ABS_PATH)
-    const [sheetName, rowIndexStr] = data.id.split('-')
-    const rowIndex = parseInt(rowIndexStr, 10)
-    const worksheet = workbook.Sheets[sheetName]
-    if (worksheet) {
-      const cellAddress = xlsx.default.utils.encode_cell({ r: rowIndex, c: 1 })
-      worksheet[cellAddress] = { t: 's', v: data.status }
-      xlsx.default.writeFile(workbook, ABS_PATH)
-      return { success: true }
+  .validator((d: { id: string, status: string }) => d)
+  .handler(async ({ data }) => {
+    console.log('--- updateTaskStatus called ---');
+    console.log('Target ID:', data.id);
+    console.log('New Status:', data.status);
+
+    try {
+      const workbook = xlsx.default.readFile(ABS_PATH)
+      const [sheetName, rowIndexStr] = data.id.split('-')
+      const rowIndex = parseInt(rowIndexStr, 10)
+      const worksheet = workbook.Sheets[sheetName]
+      
+      if (worksheet) {
+        // Status is Column B (index 1)
+        const cellAddress = xlsx.default.utils.encode_cell({ r: rowIndex, c: 1 })
+        console.log('Updating cell ' + cellAddress + ' in sheet \"' + sheetName + '\"');
+        
+        worksheet[cellAddress] = { t: 's', v: data.status, w: data.status };
+        
+        xlsx.default.writeFile(workbook, ABS_PATH)
+        console.log('File saved successfully.');
+        return { success: true }
+      }
+      throw new Error('Sheet not found: ' + sheetName)
+    } catch (error: any) {
+      console.error('Error in updateTaskStatus server function:', error.message);
+      throw error;
     }
-    throw new Error('Sheet not found')
   })
