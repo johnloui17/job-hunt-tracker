@@ -18,16 +18,28 @@ export type Task = {
   effort: string;
 }
 
-export const getTasks = createServerFn({ method: 'GET' }).handler(async () => {
-  console.log('--- getTasks called ---')
+export type TasksResponse = {
+  tasks: Task[];
+  lastModified: string;
+}
+
+export const getTasks = createServerFn({ method: 'GET' }).handler(async (): Promise<TasksResponse> => {
   if (!fs.existsSync(ABS_PATH)) {
     console.error('File not found at', ABS_PATH)
-    return []
+    return { tasks: [], lastModified: '' }
   }
 
   try {
+    const stats = fs.statSync(ABS_PATH)
+    const lastModified = stats.mtime.toLocaleString('en-IN', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+
     const workbook = (xlsx as any).default ? (xlsx as any).default.readFile(ABS_PATH) : xlsx.readFile(ABS_PATH)
-    console.log('Workbook loaded, sheets:', workbook.SheetNames)
     const allTasks: Task[] = []
 
     for (const sheetName of workbook.SheetNames.slice(1)) {
@@ -53,11 +65,10 @@ export const getTasks = createServerFn({ method: 'GET' }).handler(async () => {
       }
     }
 
-    console.log(`Parsed ${allTasks.length} tasks.`)
-    return allTasks
+    return { tasks: allTasks, lastModified }
   } catch (error: any) {
     console.error('Error in getTasks:', error.message)
-    return []
+    return { tasks: [], lastModified: '' }
   }
 })
 
@@ -81,10 +92,6 @@ export const getRawExcelData = createServerFn({ method: 'GET' }).handler(async (
 
 export const updateTaskStatus = createServerFn({ method: 'POST' })
   .handler(async ({ data }: { data: { id: string, status: string } }) => {
-    console.log('--- updateTaskStatus called ---');
-    console.log('Target ID:', data.id);
-    console.log('New Status:', data.status);
-
     try {
       const workbook = (xlsx as any).default ? (xlsx as any).default.readFile(ABS_PATH) : xlsx.readFile(ABS_PATH)
       const [sheetName, rowIndexStr] = data.id.split('-')
@@ -93,8 +100,6 @@ export const updateTaskStatus = createServerFn({ method: 'POST' })
       
       if (worksheet) {
         const cellAddress = (xlsx as any).default ? (xlsx as any).default.utils.encode_cell({ r: rowIndex, c: 1 }) : xlsx.utils.encode_cell({ r: rowIndex, c: 1 })
-        console.log('Updating cell ' + cellAddress + ' in sheet \"' + sheetName + '\"');
-        
         worksheet[cellAddress] = { t: 's', v: data.status, w: data.status };
         
         if ((xlsx as any).default) {
@@ -102,7 +107,6 @@ export const updateTaskStatus = createServerFn({ method: 'POST' })
         } else {
           xlsx.writeFile(workbook, ABS_PATH)
         }
-        console.log('File saved successfully.');
         return { success: true }
       }
       throw new Error('Sheet not found: ' + sheetName)

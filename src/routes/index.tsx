@@ -3,7 +3,7 @@ import { useSuspenseQuery, useMutation } from '@tanstack/react-query'
 import { updateTaskStatus } from '../server/tasks'
 import { downloadExcel } from '../server/download'
 import { tasksQueryOptions } from '../server/tasks.queries'
-import { CheckCircle, Circle, Download, ChevronDown, ChevronUp, Lightbulb, ListTodo } from 'lucide-react'
+import { CheckCircle, Circle, Download, ChevronDown, ChevronUp, Lightbulb, ListTodo, Clock } from 'lucide-react'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/')({
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/')({
 function App() {
   const { queryClient } = Route.useRouteContext()
   const tasksQuery = useSuspenseQuery(tasksQueryOptions())
-  const tasks = tasksQuery.data || []
+  const { tasks = [], lastModified } = tasksQuery.data || {}
   const router = useRouter()
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
 
@@ -31,7 +31,7 @@ function App() {
   const toggleTask = async (e: React.MouseEvent, id: string, currentStatus: string) => {
     e.stopPropagation()
     const newStatus = currentStatus === 'Done' ? '' : 'Done'
-    updateMutation.mutate({ data: { id, status: newStatus } })
+    updateMutation.mutate({ id, status: newStatus })
   }
 
   const handleDownload = async () => {
@@ -60,7 +60,7 @@ function App() {
   }
 
   // Group tasks by sheet
-  const groupedTasks = tasks.reduce((acc, task) => {
+  const groupedTasks = (tasks || []).reduce((acc, task) => {
     if (!acc[task.sheetName]) acc[task.sheetName] = []
     acc[task.sheetName].push(task)
     return acc
@@ -69,10 +69,13 @@ function App() {
   return (
     <main className="min-h-screen bg-gray-50 p-8 text-gray-900">
       <div className="max-w-5xl mx-auto">
-        <header className="mb-8 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <header className="mb-8 flex justify-between items-end bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Task Tracker</h1>
-            <p className="text-gray-500 mt-2 font-medium">Strategic roadmap to your next role</p>
+            <p className="text-gray-500 mt-2 font-medium flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              Last synced: <span className="text-gray-700">{lastModified || 'Just now'}</span>
+            </p>
           </div>
           <button
             onClick={handleDownload}
